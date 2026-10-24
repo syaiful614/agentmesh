@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .labels import PUBLIC, Label
@@ -24,6 +24,12 @@ class Tool:
     sink: bool = False  # sends information out of the trust boundary
     clearance: Callable[[Mapping[str, Any]], frozenset[str]] = _no_clearance
     mutates: bool = False
+    parameters: dict[str, Any] = field(
+        default_factory=lambda: {"type": "object", "properties": {}}
+    )  # JSON schema shown to a model
+
+    def spec(self) -> dict[str, Any]:
+        return {"name": self.name, "description": self.description, "input_schema": self.parameters}
 
     def label_for(self, args: Mapping[str, Any]) -> Label:
         return self.produces(args) if callable(self.produces) else self.produces
@@ -45,6 +51,9 @@ class ToolRegistry:
 
     def get(self, name: str) -> Tool | None:
         return self._tools.get(name)
+
+    def all(self) -> list[Tool]:
+        return [self._tools[n] for n in sorted(self._tools)]
 
     @property
     def names(self) -> list[str]:

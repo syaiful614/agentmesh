@@ -35,8 +35,8 @@ it has itself seen.
 
 | Missing | Why it matters | Planned |
 |---|---|---|
-| LLM brain adapter | run real models through the same generator protocol | stage 2 |
-| Durable, resumable runs and approvals | crash recovery for long delegations | stage 3 (event-source the mesh like AgentKernel) |
+| ~~LLM brain adapter~~ | done in 0.2.0 (`llm.py`); still needs a run against live APIs | verified offline only |
+| Durable, resumable runs and approvals | crash recovery for long delegations | next (event-source the mesh like AgentKernel) |
 | MCP gateway | enforce the same broker in front of external MCP servers | stage 4 |
 | Declassification with review | a human or a verified function lowers a label on purpose | stage 5 |
 | Eval gate in CI | replay recorded trajectories and fail the build on policy drift | stage 5 |

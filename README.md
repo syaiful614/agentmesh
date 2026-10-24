@@ -1,10 +1,11 @@
 # AgentMesh
+
 ![ci](https://github.com/syaiful614/agentmesh/actions/workflows/ci.yml/badge.svg)
 
 **A capability-secure runtime for multi-agent systems.** Delegation can only *narrow* authority,
 and information-flow labels follow data across agent boundaries, so a compromised sub-agent
 cannot launder private data, widen its permissions, or spend more than it was given.
-Standard library only, ~1,300 lines, 45 tests, 12 offline attack scenarios.
+Standard library only, ~1,900 lines, 62 tests, 12 offline attack scenarios, adapters for real models.
 
 ## The problem single-agent guards do not solve
 
@@ -90,6 +91,27 @@ A tool declares what it does; the security layer reasons about these facts, neve
 claims: `produces=` (the label of its output), `sink=True`, `clearance=` (tags the destination may
 receive), `mutates=`.
 
+## Real models
+
+```bash
+agentmesh live --provider fake              # a simulated gullible model, no key needed
+agentmesh live --provider fake-delegating   # same, but it delegates the reading to a sub-agent
+
+# Anthropic (the key is read from the environment, never from the command line)
+$env:ANTHROPIC_API_KEY = "..."              # PowerShell; use export on Linux/macOS
+agentmesh live --provider anthropic --model <model-name> --trials 5
+
+# Any OpenAI-compatible server, e.g. a local Ollama model
+agentmesh live --provider openai --base-url http://localhost:11434/v1 --model <model-name> --trials 5
+```
+
+Each trial reports three separate facts: did the model **follow** the injected instruction, did the
+mesh **block** that attempt, did the secret **leak**. If the model never follows the injection, the
+report says the mesh was never exercised, so a model's good behaviour is not counted as a defence.
+Cost is bounded by the token (`max_calls`, `depth`), not by trusting the model. `make_brain` shows a
+model only the tools its token allows and offers a `delegate` tool; several delegate calls in one
+turn run as parallel siblings.
+
 ## Why the tests can be trusted
 
 Passing tests prove little unless they can fail. `tests/test_redteam.py` switches a defence off and
@@ -104,9 +126,9 @@ that approves everything, so the denials shown do not depend on a human noticing
 - The context label is **conservative**: it tracks what an agent has seen, not which output depends on
   what. Once an agent has seen private data it cannot send to an uncleared destination, even for an
   unrelated reason. Use a fresh agent for unrelated work.
-- Scripted attackers only. No live LLM adapter yet, and none of this has been measured against real
-  models. Tools run in-process (no sandbox), single node, no durable resume (see
-  [docs/DESIGN.md](docs/DESIGN.md)).
+- The adapters are tested against a local fake HTTP server and a simulated gullible model, **not against
+  live provider APIs**, and no result about how real models behave is claimed. Tools run in-process
+  (no sandbox), single node, no durable resume (see [docs/DESIGN.md](docs/DESIGN.md)).
 - Approvals are a synchronous callback here, not durable across process restarts.
 - Journal entries clip long values, and hash chaining does not detect truncation of the tail.
 - The root key is held in memory by the `Authority`; key management is out of scope.
@@ -123,7 +145,9 @@ src/agentmesh/
   tools.py       tools with labels, sink flag and clearance
   demo_tools.py  a world that reproduces the exfiltration setup
   redteam.py     12 scripted attack scenarios
-  cli.py         redteam, show, verify
+  llm.py         Anthropic and OpenAI-compatible clients, model-driven brain, test double
+  live.py        the injection scenario against a model, several trials
+  cli.py         redteam, live, show, verify
 ```
 
 ## License

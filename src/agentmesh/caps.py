@@ -174,3 +174,8 @@ def evaluate(
 def remaining_depth(caveats: tuple[Mapping[str, Any], ...]) -> int | None:
     values = [c["remaining"] for c in caveats if c["type"] == "depth"]
     return min(values) if values else None
+
+
+def scope_allows(caveats: tuple[Mapping[str, Any], ...], tool_name: str) -> bool:
+    """Does the token's tool scope admit this tool? Used to show a model only what it may call."""
+    return all(any(fnmatchcase(tool_name, g) for g in c["allow"]) for c in caveats if c["type"] == "tools")
