@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agentmesh"
-version = "0.2.0"
+version = "0.2.6"
 description = "Capability-secure multi-agent runtime: attenuating delegation tokens and cross-agent information-flow control."
 readme = "README.md"
 requires-python = ">=3.10"

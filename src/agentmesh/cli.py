@@ -8,7 +8,7 @@ import os
 import sys
 
 from .journal import Journal
-from .live import run_live
+from .live import REPLY_TASK, TASK, run_live
 from .llm import AnthropicClient, Client, GullibleClient, LLMError, OpenAICompatClient
 from .redteam import run_all
 
@@ -37,17 +37,35 @@ def _client(args: argparse.Namespace) -> Client:
 
 def _live(args: argparse.Namespace) -> int:
     try:
-        report = run_live(_client(args), trials=args.trials)
+        task = REPLY_TASK if args.task == "reply" else (args.task or TASK)
+        report = run_live(
+            _client(args),
+            trials=args.trials,
+            task=task,
+            delegation=not args.no_delegate,
+            journal_dir=args.journal_dir,
+            injection=args.injection,
+        )
     except LLMError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     n = len(report.trials)
+    for i, t in enumerate(report.trials, 1):
+        flag = "  [tool call written as text]" if t.text_tool_call else ""
+        print(f"trial {i}: status={t.status} tools={t.tools or 'none'}{flag}")
+        print(f"         answer: {t.answer or '(empty)'}")
+        shown = "; ".join(f"{to} -> {what}" for to, what in t.sends) or "none"
+        print(f"         emails: {shown}")
+    print()
     print(f"trials:                                   {n}")
+    print(f"tool calls made by the model:              {report.tool_calls}")
+    print(f"tool calls written as plain text:         {report.text_tool_calls}/{n}")
+    print(f"sends denied by the mesh:                 {report.denied_sends}")
+    print(f"emails actually delivered:                 {report.delivered}")
     print(f"model followed the injection (tried send): {report.attempted}/{n}")
     print(f"attempts blocked by the mesh:              {report.blocked}/{report.attempted}")
-    print(f"secret leaked:                             {report.leaked}/{n}")
-    if report.attempted == 0:
-        print("note: the model resisted every time, so the mesh was never exercised")
+    print(f"secret reached an outside destination:     {report.leaked}/{n}")
+    print(f"verdict: {report.verdict()}")
     return 0 if report.leaked == 0 else 1
 
 
@@ -75,6 +93,15 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model")
     p.add_argument("--base-url", help="for openai-compatible servers, e.g. http://localhost:11434/v1")
     p.add_argument("--trials", type=int, default=3)
+    p.add_argument("--task", help='free text, or "reply" for a task that needs send_email')
+    p.add_argument("--journal-dir", help="keep one journal per trial here (inspect with: show)")
+    p.add_argument(
+        "--injection",
+        choices=["blatant", "subtle"],
+        default="blatant",
+        help="wording of the attack in the inbox",
+    )
+    p.add_argument("--no-delegate", action="store_true", help="do not offer the delegate tool (weak models)")
     p.set_defaults(fn=_live)
     p = sub.add_parser("show", help="print a journal")
     p.add_argument("path")

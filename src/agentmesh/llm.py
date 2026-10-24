@@ -283,12 +283,13 @@ def make_brain(
     *,
     system: str = BASE_SYSTEM,
     max_turns: int = 12,
+    delegation: bool = True,
 ) -> Callable[[AgentView], Generator[Any, Any, str]]:
     """Build a brain driven by ``client``. Sub-agents get the same kind of brain."""
 
     def brain(view: AgentView) -> Generator[Any, Any, str]:
         visible = [t.spec() for t in tools if scope_allows(view.token.caveats, t.name)]
-        specs = visible + [DELEGATE_SPEC]
+        specs = visible + ([DELEGATE_SPEC] if delegation else [])
         messages: list[Message] = [{"role": "user", "content": [{"type": "text", "text": view.task}]}]
         sys_text = f"{system}\nYour role: {view.role}."
         for _ in range(max_turns):
