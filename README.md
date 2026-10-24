@@ -1,5 +1,5 @@
 # AgentMesh
-
+![ci](https://github.com/syaiful614/agentmesh/actions/workflows/ci.yml/badge.svg)
 **A capability-secure runtime for multi-agent systems.** Delegation can only *narrow* authority,
 and information-flow labels follow data across agent boundaries, so a compromised sub-agent
 cannot launder private data, widen its permissions, or spend more than it was given.
